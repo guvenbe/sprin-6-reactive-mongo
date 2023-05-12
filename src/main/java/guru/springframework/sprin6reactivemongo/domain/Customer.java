@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
@@ -16,13 +17,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Document
 public class Customer {
     @Id
-    Integer id;
+    private String id;
 
     @NotBlank
     @Size(min = 5, max =255)
-    String customerName;
+    private String customerName;
     @CreatedDate
     private LocalDateTime createdDate;
     @LastModifiedDate
