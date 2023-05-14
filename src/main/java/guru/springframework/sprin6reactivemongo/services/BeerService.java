@@ -1,5 +1,6 @@
 package guru.springframework.sprin6reactivemongo.services;
 
+import guru.springframework.sprin6reactivemongo.domain.Beer;
 import guru.springframework.sprin6reactivemongo.model.BeerDTO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -7,9 +8,9 @@ import reactor.core.publisher.Mono;
 
 public interface BeerService {
 
-//    Mono<BeerDTO> findFirstByBeerName(String beerName);
-//
-//    Flux<BeerDTO> findByBeerStyle(String beerStyle);
+    Mono<BeerDTO> findFirstByBeerName(String beerName);
+    Flux<BeerDTO> findByBeerStyle(String beerStyle);
+
     Flux<BeerDTO> listBeers();
     Mono<BeerDTO> saveBeer(Mono<BeerDTO> beerDto);
 

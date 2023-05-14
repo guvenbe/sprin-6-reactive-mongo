@@ -2,6 +2,7 @@ package guru.springframework.sprin6reactivemongo.services;
 
 import guru.springframework.sprin6reactivemongo.domain.Beer;
 import guru.springframework.sprin6reactivemongo.mappers.BeerMapper;
+import guru.springframework.sprin6reactivemongo.mappers.BeerMapperImpl;
 import guru.springframework.sprin6reactivemongo.model.BeerDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +30,37 @@ class BeerServiceImplTest {
     BeerDTO beerDto;
     @BeforeEach
     void setUp() {
-        beerDto = beerMapper.beerToBeerDto(getTestBeerDto());
+        beerDto = beerMapper.beerToBeerDto(getTestBeer());
+    }
+
+    @Test
+    void testFindByBeerStyle() {
+        BeerDTO beerDto1 = getSavedBeerDto();
+        AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+
+        beerService.findByBeerStyle(beerDto1.getBeerStyle())
+                .subscribe(dto->{
+                    System.out.println(dto.toString());
+                    atomicBoolean.set(true);
+                });
+
+        await().untilTrue(atomicBoolean);
+
+    }
+
+    @Test
+    void findFirstByBeerNameTest() {
+        BeerDTO beerDTO = getSavedBeerDto();
+        AtomicBoolean atomicBoolean = new AtomicBoolean(false);
+
+        Mono<BeerDTO> foundDto = beerService.findFirstByBeerName(beerDTO.getBeerName());
+
+        foundDto.subscribe(dto->{
+            System.out.println(dto.toString());
+            atomicBoolean.set(true);
+        });
+
+        await().untilTrue(atomicBoolean);
     }
 
     @Test
@@ -57,10 +88,65 @@ class BeerServiceImplTest {
     @Test
     @DisplayName("Test Save Beer Using Block")
     void testSaveBeerUseBlock() {
-//        BeerDTO savedDto = beerService.saveBeer(Mono.just(getTestBeerDto())).block();
+        BeerDTO savedDto = beerService.saveBeer(Mono.just(getTestBeerDto())).block();
+        assertThat(savedDto).isNotNull();
+        assertThat(savedDto.getId()).isNotNull();
     }
 
-    public static Beer getTestBeerDto(){
+    @Test
+    @DisplayName("Test Update Beer Using Block")
+    void testUpdateBlocking() {
+        final String newName = "New Beer Name";
+        BeerDTO savedBeerDto = getSavedBeerDto();
+        savedBeerDto.setBeerName(newName);
+
+        BeerDTO updatedDto = beerService.saveBeer(
+                Mono.just(savedBeerDto)).block();
+        BeerDTO fetchedDto = beerService.getById(updatedDto.getId()).block();
+
+       assertThat(fetchedDto.getBeerName()).isEqualTo(newName);
+    }
+
+    @Test
+    void testDeleteBeer() {
+        BeerDTO beerToDelete = getSavedBeerDto();
+        beerService.deleteBeerById(beerToDelete.getId()).block();
+        Mono<BeerDTO> expectedEmptyBeerMono = beerService.getById(beerToDelete.getId());
+        BeerDTO emptyBeer = expectedEmptyBeerMono.block();
+        assertThat(emptyBeer).isNull();
+    }
+
+    @Test
+    @DisplayName("Test Update Using Reactive Streams")
+    void testUpdateStreaming() {
+        final String newName = "New Beer Name";  // use final so cannot mutate
+
+        AtomicReference<BeerDTO> atomicDto = new AtomicReference<>();
+
+        beerService.saveBeer(Mono.just(getTestBeerDto()))
+                .map(savedBeerDto -> {
+                    savedBeerDto.setBeerName(newName);
+                    return savedBeerDto;
+                })
+                .flatMap(beerService::saveBeer) // save updated beer
+                .flatMap(savedUpdatedDto -> beerService.getById(savedUpdatedDto.getId())) // get from db
+                .subscribe(dtoFromDb -> {
+                    atomicDto.set(dtoFromDb);
+                });
+
+        await().until(() -> atomicDto.get() != null);
+        assertThat(atomicDto.get().getBeerName()).isEqualTo(newName);
+    }
+
+    private BeerDTO getSavedBeerDto() {
+        return beerService.saveBeer(Mono.just(getTestBeerDto())).block();
+    }
+
+
+    public static BeerDTO getTestBeerDto(){
+        return new BeerMapperImpl().beerToBeerDto(getTestBeer());
+    }
+    public static Beer getTestBeer(){
         return Beer.builder()
                 .beerName("space Dust")
                 .beerStyle("IPA")
