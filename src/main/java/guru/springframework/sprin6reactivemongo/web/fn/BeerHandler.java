@@ -12,6 +12,7 @@ import org.springframework.validation.Validator;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
@@ -24,6 +25,10 @@ public class BeerHandler {
     private void validate(BeerDTO beerDTO){
         Errors errors = new BeanPropertyBindingResult(beerDTO, "beerDTO");
         validator.validate(beerDTO, errors);
+
+        if(errors.hasErrors()){
+            throw new ServerWebInputException(errors.toString());
+        }
     }
     public Mono<ServerResponse> deleteBeerById(ServerRequest request) {
         return beerService.getById(request.pathVariable("beerId"))
@@ -34,6 +39,7 @@ public class BeerHandler {
 
     public Mono<ServerResponse> patchBeerById(ServerRequest request) {
         return request.bodyToMono(BeerDTO.class)
+                .doOnNext(this::validate)
                 .flatMap(beerDTO -> beerService.patchBeer(request.pathVariable("beerId"), beerDTO))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
                 .flatMap(savedDto -> ServerResponse.noContent().build());
@@ -41,6 +47,7 @@ public class BeerHandler {
 
     public Mono<ServerResponse> updateBeerById(ServerRequest serverRequest) {
         return serverRequest.bodyToMono(BeerDTO.class)
+                .doOnNext(this::validate)
                 .flatMap(beerDTO -> beerService.updateBeer(serverRequest.pathVariable("beerId"), beerDTO))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
                 .flatMap(savedDto -> ServerResponse.noContent().build());
@@ -49,6 +56,7 @@ public class BeerHandler {
 
     public Mono<ServerResponse> createNewBeer(ServerRequest serverRequest) {
         return beerService.saveBeer(serverRequest.bodyToMono(BeerDTO.class))
+                .doOnNext(this::validate)
                 .flatMap(beerDTO -> ServerResponse
                         .created(UriComponentsBuilder
                                 .fromPath(BeerRouterConfig.BEER_PATH_ID)
