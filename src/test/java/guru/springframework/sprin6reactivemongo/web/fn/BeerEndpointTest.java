@@ -142,7 +142,7 @@ public class BeerEndpointTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Content-type", "application/json")
-                .expectBody(BeerDTO.class);
+                .expectBody().jsonPath("$.id").isEqualTo(beerDTO.getId());
     }
 
     @Test
@@ -160,6 +160,8 @@ public class BeerEndpointTest {
                 .body(Mono.just(BeerServiceImplTest.getTestBeer()), BeerDTO.class)
                 .header("Content-Type", "application/json")
                 .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().exists("location")
                 .returnResult(BeerDTO.class);
 
         List<String> location = beerDTOFluxExchangeResult.getResponseHeaders().get("Location");
