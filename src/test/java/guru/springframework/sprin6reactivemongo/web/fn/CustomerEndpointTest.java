@@ -23,6 +23,29 @@ public class CustomerEndpointTest {
     WebTestClient webTestClient;
 
     @Test
+    @Order(3)
+    void testUpdateCustomer() {
+        CustomerDTO customerDTO = getSavedTestCustomer();
+        customerDTO.setCustomerName("New Customer Name");
+        webTestClient.put().uri(CustomerRouterConfig.CUSTOMER_PATH_ID, customerDTO.getId())
+                .body(Mono.just(customerDTO), CustomerDTO.class)
+                .header("Content-type", "application/json")
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
+
+    @Order(999)
+    @Test
+    void testDeleteCustomer(){
+        CustomerDTO dto = getSavedTestCustomer();
+       webTestClient.delete()
+               .uri(CustomerRouterConfig.CUSTOMER_PATH_ID, dto.getId())
+               .exchange()
+               .expectStatus().isNoContent();
+    }
+
+    @Test
     @Order(2)
     void testListCustomers() {
         webTestClient.get().uri(CustomerRouterConfig.CUSTOMER_PATH)
@@ -43,13 +66,14 @@ public class CustomerEndpointTest {
     }
 
     @Test
+    @Order(1)
     void testGetById() {
         CustomerDTO customerDTO = getSavedTestCustomer();
         webTestClient.get().uri(CustomerRouterConfig.CUSTOMER_PATH_ID, customerDTO.getId())
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Content-type", "application/json")
-                .expectBody(CustomerDTO.class);
+                .expectBody().jsonPath("$.customerName").isEqualTo("Test Customer");
     }
 
     public CustomerDTO getSavedTestCustomer() {
