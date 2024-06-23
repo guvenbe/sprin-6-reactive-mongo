@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.greaterThan;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SpringBootTest
 @AutoConfigureWebTestClient
@@ -21,6 +22,24 @@ public class CustomerEndpointTest {
 
     @Autowired
     WebTestClient webTestClient;
+    @Test
+    void testPatchIdFound() {
+        CustomerDTO customerDTO = getSavedTestCustomer();
+        customerDTO.setCustomerName("New Customer Name");
+        webTestClient.patch().uri(CustomerRouterConfig.CUSTOMER_PATH_ID, customerDTO.getId())
+                .body(Mono.just(customerDTO), CustomerDTO.class)
+                .exchange()
+                .expectStatus().isNoContent();
+    }
+
+    @Test
+    void testPatchIdNotFound() {
+        webTestClient.patch()
+                .uri(CustomerRouterConfig.CUSTOMER_PATH_ID, 999)
+                .body(Mono.just(getSCustomerDto()), CustomerDTO.class)
+                .exchange()
+                .expectStatus().isNotFound();
+    }
 
     @Test
     @Order(3)
@@ -34,6 +53,25 @@ public class CustomerEndpointTest {
                 .expectStatus().isNoContent();
     }
 
+    @Test
+    void testUpdateNotFound() {
+        webTestClient.put()
+                .uri(CustomerRouterConfig.CUSTOMER_PATH_ID, 999)
+                .body(Mono.just(getSCustomerDto()), CustomerDTO.class)
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void testUpdateBadRequest() {
+        CustomerDTO customerDTO = getSavedTestCustomer();
+        customerDTO.setCustomerName("");
+        webTestClient.put()
+                .uri(CustomerRouterConfig.CUSTOMER_PATH_ID, customerDTO.getId())
+                .body(Mono.just(customerDTO), CustomerDTO.class)
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
 
     @Order(999)
     @Test
@@ -44,6 +82,13 @@ public class CustomerEndpointTest {
                .exchange()
                .expectStatus().isNoContent();
     }
+    @Test
+    void testDeleteNotFound() {
+        webTestClient.delete()
+                .uri(CustomerRouterConfig.CUSTOMER_PATH_ID, 999)
+                .exchange()
+                .expectStatus().isNotFound();
+    }
 
     @Test
     @Order(2)
@@ -52,7 +97,7 @@ public class CustomerEndpointTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Content-type", "application/json")
-                .expectBody().jsonPath("$.size()").isEqualTo(3);
+                .expectBody().jsonPath("$.size()").value(greaterThan(3));
     }
 
     @Test
@@ -74,6 +119,13 @@ public class CustomerEndpointTest {
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("Content-type", "application/json")
                 .expectBody().jsonPath("$.customerName").isEqualTo("Test Customer");
+    }
+
+    @Test
+    void testGetByIdNotFound() {
+        webTestClient.get().uri(CustomerRouterConfig.CUSTOMER_PATH_ID, 999)
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
     public CustomerDTO getSavedTestCustomer() {

@@ -40,10 +40,9 @@ public class CustomerHandler {
 
     public Mono<ServerResponse> getCustomerById(ServerRequest request){
         return ServerResponse.ok()
-                .body(
-
-                        customerService.getByCustomerId(
-                                request.pathVariable("customerId")),
+                .body(customerService.getByCustomerId(
+                                request.pathVariable("customerId"))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))),
                         CustomerDTO.class);
     }
     public Mono<ServerResponse> updateCustomer(ServerRequest serverRequest){
@@ -71,6 +70,15 @@ public class CustomerHandler {
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
                 .flatMap(customerDTO -> customerService.deleteCustomerById(customerDTO.getId()))
                 .then(ServerResponse.noContent().build());
+    }
+
+    public Mono<ServerResponse> patchCustomer(ServerRequest request){
+        return request.bodyToMono(CustomerDTO.class)
+                .doOnNext(this::validate)
+                .flatMap(customerDTO -> customerService.patchCustomer(
+                        request.pathVariable("customerId"), customerDTO))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                .flatMap(savedDto -> ServerResponse.noContent().build());
     }
 
 }
